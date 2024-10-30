@@ -6,11 +6,12 @@ import { faArrowUp } from '@fortawesome/free-solid-svg-icons'
 import AxiosInstance from "../../axios/AxiosInstance.tsx";
 import store from "../../mobx/AppDataStore.ts";
 import {RoomInfo} from "../../@types/RoomInfo.ts";
+import {socket} from "../../socket/socket.ts";
 
 
 function ChatPage() {
     const [message,setMessage]=useState<string>("");
-    const [messages,setMessages]=useState<string>("");
+    const [messages,setMessages]=useState<string[]>([]);
     const [chatId,setChatId]=useState('');
     const [isRoomJoined,setIsRoomJoined]=useState(false);
     const [rooms,setRooms]=useState<Array<RoomInfo>>([]);
@@ -19,6 +20,20 @@ function ChatPage() {
     useEffect(() => {
         showRooms();
     }, []);
+    useEffect(() => {
+        console.log(messages);
+    }, [messages]);
+
+    useEffect(() => {
+        socket.on("user_connected",(room)=>{
+            console.log("here")
+            alert(`connected to the room ${room}`);
+        })
+        socket.on("receive_message",(recMessage:string)=>{
+            console.log("recMessage",recMessage)
+            setMessages(messages => [...messages, recMessage]);
+        })
+    }, [socket]);
 
     function showRooms(){
         AxiosInstance.get('/getRooms',{ headers: {"Authorization" : `Bearer ${store.accessToken}`} })
@@ -51,8 +66,23 @@ function ChatPage() {
             });
     }
 
-    function sendMessage(){
+    function joinRoom(room){
+        setIsRoomJoined(true);
+        setChatId(room.id);
+        console.log(room);
+        if (room){
+        socket.emit("join_room", {room:room})
+         }
+    }
+    function leaveRoom(room){
+        setIsRoomJoined(false);
+    }
 
+    function sendMessage(){
+        console.log("init message",message)
+        setMessages(messages => [...messages, message]);
+        socket.emit("send_message",{message:message,roomId:chatId});
+        setMessage('');
     }
 
 
@@ -65,14 +95,17 @@ function ChatPage() {
                         <div className="messagesArea">
 
                             welcome to chat
+                            <div className="btn" onClick={leaveRoom}>
+                                leave
+                            </div>
                             <div className="chat">
-                                <div className="message">
-                                    here i am. how are you doing?how are you doing?how are you doing?how are you doing?
-                                </div>
-                                <div className="message" style={{alignSelf:"flex-end",backgroundColor:"green"}}>
-                                    here i am. how are you doing?how are you doing?how are you doing?how are you doing?
-                                </div>
-
+                                {messages.map((mes,idx)=>{
+                                    return(
+                                        <div key={idx} className="message">
+                                            {mes}
+                                        </div>
+                                    )
+                                })}
                             </div>
 
 
@@ -102,7 +135,7 @@ function ChatPage() {
                                 {room.id}
                             </div>
                             <div className="btns">
-                            <div className="btn">
+                            <div className="btn" onClick={()=>joinRoom(room)}>
                                 join
                             </div>
                             <div className="btn delete" onClick={()=>deleteRoom(room)}>

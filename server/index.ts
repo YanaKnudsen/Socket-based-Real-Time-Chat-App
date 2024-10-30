@@ -20,13 +20,8 @@ const myCache = new NodeCache();
     {key: "rooms", val: [], ttl: 10000},
 ])
 
-
 const {v4:uuidV4}=require('uuid');
 require('dotenv').config();
-
-const rooms:string[]=[]
-
-
 const bcryptSalt=bcrypt.genSaltSync(8);
 
 app.use(express.json());
@@ -34,6 +29,7 @@ app.use(cors({
     credentials:true,
     origin:'http://localhost:5173',
 }));
+
 
 const io = new Server(server,{
     cors:{
@@ -56,28 +52,15 @@ io.on("connection",(socket)=>{
 
 
 io.on("connection",(socket)=> {
-    console.log(`Ùser connected ${socket.id}`); //will display as many time as many users are connected
-    socket.on("join_room", (room) => {
-
-        socket.join(room);
+    socket.on("join_room", (data) => {
+        console.log("data",data.room.id);
+        socket.join(data.room.id);
+    })
+    socket.on("send_message", (data) => {
+        console.log("message data",data);
+        socket.to(data.roomId).emit("receive_message",data.message);
     })
 })
- /*   socket.on("send_message",(data)=>{
-             console.log(data.user);
-             //send data to all users connected to the server
-        //broadcast send to everyone except yourself
-         socket.broadcast.emit("receive_message",data);
-
-        //send to specific user
-         //socket.to(str(room1)).emit(/* ... *///);
-// socket.to(data.room).emit("receive_message",data);
-//});
-
-
-//})
-
-
-
 
 app.post('/signup', async (req,res)=>{
     const {name,email,password}=req.body;
@@ -167,13 +150,14 @@ app.get('/getRooms',authenticateToken,async (req,res)=> {
 
 });
 
+/*
 app.get('/chat/:room',async (req,res)=> {
     //res.render('room',{roomId:req.params.room});
     console.log('here');
     res.sendStatus(201);
 
 
-});
+});*/
 
 
 
@@ -189,7 +173,7 @@ function authenticateToken(req,res,next){
         jwt.verify(accessToken,process.env.ACCESS_TOKEN_SECRET,async (err,user)=>{
             if (err) res.sendStatus(403);
             const {email}=user;
-           // console.log(email);
+            console.log(email);
             const userInfo = await UserModel.findOne({email: email});
             req.user=userInfo;
             next()
