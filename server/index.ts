@@ -135,18 +135,26 @@ app.get('/createRoom',authenticateToken,async (req,res)=> {
     if ( value == undefined ){
         console.log("this object is not in the cache")
     }
-    console.log("myCache",value);
     //const roomObj = { id: roomId, owner: req.user._id }; create new type room
     value?.push({id:roomId,owner:req.user._id})
     myCache.mset([
         {key: "rooms", val: value, ttl: 10000},
     ])
-    let currentRooms = myCache.get( "rooms" );
-    if ( currentRooms == undefined ){
+    res.json(value);
+
+});
+
+app.post('/deleteRoom',authenticateToken,async (req,res)=> {
+    const {room}=req.body;
+    let value = myCache.get( "rooms" );
+    if ( value == undefined ){
         console.log("this object is not in the cache")
     }
-    console.log("currentRooms",currentRooms)
-    res.json(currentRooms);
+    value = value?.filter((val) => val.id!==room.id);
+    myCache.mset([
+        {key: "rooms", val: value, ttl: 10000},
+    ])
+    res.json(value);
 
 });
 
@@ -181,7 +189,7 @@ function authenticateToken(req,res,next){
         jwt.verify(accessToken,process.env.ACCESS_TOKEN_SECRET,async (err,user)=>{
             if (err) res.sendStatus(403);
             const {email}=user;
-            console.log(email);
+           // console.log(email);
             const userInfo = await UserModel.findOne({email: email});
             req.user=userInfo;
             next()

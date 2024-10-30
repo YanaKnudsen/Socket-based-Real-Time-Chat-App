@@ -15,7 +15,7 @@ function ChatPage() {
     const [isRoomJoined,setIsRoomJoined]=useState(false);
     const [rooms,setRooms]=useState<Array<RoomInfo>>([]);
 
-    //create new room
+
     useEffect(() => {
         showRooms();
     }, []);
@@ -34,10 +34,17 @@ function ChatPage() {
     function createRoom(){
         AxiosInstance.get('/createRoom',{ headers: {"Authorization" : `Bearer ${store.accessToken}`} })
             .then(res => {
-                console.log("data",res.data);
-                setChatId(res.data);
-                setRooms(res.data);
-                console.log("current rooms",res.data);
+                setRooms(res.data)
+            })
+            .catch(err=>{
+
+            });
+    }
+
+    function deleteRoom(room:RoomInfo){
+        AxiosInstance.post('/deleteRoom',{room},{ headers: {"Authorization" : `Bearer ${store.accessToken}`} })
+            .then(res => {
+                setRooms(res.data)
             })
             .catch(err=>{
 
@@ -98,7 +105,7 @@ function ChatPage() {
                             <div className="btn">
                                 join
                             </div>
-                            <div className="btn delete">
+                            <div className="btn delete" onClick={()=>deleteRoom(room)}>
                                 delete
                             </div>
                             </div>
