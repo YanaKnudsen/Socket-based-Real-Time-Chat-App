@@ -1,7 +1,4 @@
-//create folder server
-//create index.js
-//cd server
-//yarn add express nodemon mongoose bcryptjs jsonwebtoken cors dotenv
+
 
 const express = require('express');
 const cors=require('cors');
@@ -17,8 +14,17 @@ const {Server}=require('socket.io');
 const server=http.createServer(app);
 
 
+const NodeCache = require( "node-cache" );
+const myCache = new NodeCache();
+ myCache.mset([
+    {key: "rooms", val: [], ttl: 10000},
+])
+
+
 const {v4:uuidV4}=require('uuid');
 require('dotenv').config();
+
+const rooms:string[]=[]
 
 
 const bcryptSalt=bcrypt.genSaltSync(8);
@@ -28,7 +34,6 @@ app.use(cors({
     credentials:true,
     origin:'http://localhost:5173',
 }));
-//app.use(cors());
 
 const io = new Server(server,{
     cors:{
@@ -39,8 +44,7 @@ const io = new Server(server,{
 
 mongoose.connect(process.env.MONGO_URL);
 
-
-
+/*
 io.on("connection",(socket)=>{
 
     socket.on("join_video_room",(data)=>{
@@ -48,7 +52,29 @@ io.on("connection",(socket)=>{
         socket.join(data.room);
         socket.to(data.room).emit("user_connected",data.user);
     });
+})*/
+
+
+io.on("connection",(socket)=> {
+    console.log(`Ùser connected ${socket.id}`); //will display as many time as many users are connected
+    socket.on("join_room", (room) => {
+
+        socket.join(room);
+    })
 })
+ /*   socket.on("send_message",(data)=>{
+             console.log(data.user);
+             //send data to all users connected to the server
+        //broadcast send to everyone except yourself
+         socket.broadcast.emit("receive_message",data);
+
+        //send to specific user
+         //socket.to(str(room1)).emit(/* ... *///);
+// socket.to(data.room).emit("receive_message",data);
+//});
+
+
+//})
 
 
 
@@ -103,6 +129,46 @@ app.get('/profile',authenticateToken,async (req,res)=> {
 });
 
 
+app.get('/createRoom',authenticateToken,async (req,res)=> {
+    const roomId=uuidV4();
+    let value = myCache.get( "rooms" );
+    if ( value == undefined ){
+        console.log("this object is not in the cache")
+    }
+    console.log("myCache",value);
+    //const roomObj = { id: roomId, owner: req.user._id }; create new type room
+    value?.push({id:roomId,owner:req.user._id})
+    myCache.mset([
+        {key: "rooms", val: value, ttl: 10000},
+    ])
+    let currentRooms = myCache.get( "rooms" );
+    if ( currentRooms == undefined ){
+        console.log("this object is not in the cache")
+    }
+    console.log("currentRooms",currentRooms)
+    res.json(currentRooms);
+
+});
+
+app.get('/getRooms',authenticateToken,async (req,res)=> {
+    let currentRooms = myCache.get( "rooms" );
+    if ( currentRooms == undefined ){
+        console.log("this object is not in the cache")
+    }
+    res.json(currentRooms);
+
+});
+
+app.get('/chat/:room',async (req,res)=> {
+    //res.render('room',{roomId:req.params.room});
+    console.log('here');
+    res.sendStatus(201);
+
+
+});
+
+
+
 
 
 function authenticateToken(req,res,next){
@@ -113,7 +179,6 @@ function authenticateToken(req,res,next){
     }
     else{
         jwt.verify(accessToken,process.env.ACCESS_TOKEN_SECRET,async (err,user)=>{
-            //can I give next only info from token or is it okay to extract like this?
             if (err) res.sendStatus(403);
             const {email}=user;
             console.log(email);
@@ -128,9 +193,7 @@ function authenticateToken(req,res,next){
 function generateAccessToken(userInfo){
     return jwt.sign({email:userInfo.email, id:userInfo._id,},process.env.ACCESS_TOKEN_SECRET,{});//15m
 }
-function generateRefreshToken(userInfo){
-    return jwt.sign({email:userInfo.email, id:userInfo._id,},process.env.REFRESH_TOKEN_SECRET,{});
-}
+
 
 //app.listen(3000);
 server.listen(3000,()=>{

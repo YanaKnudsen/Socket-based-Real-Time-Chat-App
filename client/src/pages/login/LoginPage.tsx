@@ -18,27 +18,6 @@ function LoginPage() {
     const [loginEmail,setLoginEmail]=useState('');
     const [loginPassword,setLoginPassword]=useState('');
 
-    function closeLoginPage(){
-        store.setIsLoginOpen(false);
-        store.setIsSignUpOpen(false);
-    }
-
-    async function handleSignUp(ev){
-        ev.preventDefault();
-
-        AxiosInstance.post('/signup',{name,email,password},{withCredentials:true})
-            .then(res => {
-                // Handle response
-                alert('Registration Successful. Now you can login.')
-
-            })
-            .catch(err => {
-                // Handle errors
-                console.error(err);
-                alert('Registration failed. Please try again.')
-            });
-
-    }
 
     async function handleLogin(ev){
         ev.preventDefault();
@@ -52,8 +31,7 @@ function LoginPage() {
                 AxiosInstance.get('/profile',{ headers: {"Authorization" : `Bearer ${store.accessToken}`} })
                     .then(res=>{
                         store.setUser(res.data);
-                        alert('Login Successful!');
-                       // setRedirect(true);
+                        setRedirect(true);
                     })
                     .catch(err=>{
 
@@ -65,7 +43,7 @@ function LoginPage() {
             });
     }
     if (redirect){
-        return <Navigate to={'/profile'}/>
+        return <Navigate to={'/chat'}/>
     }
 
 

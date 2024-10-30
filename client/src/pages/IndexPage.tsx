@@ -10,14 +10,6 @@ import {useEffect, useState} from "react";
 import SignUpPage from "./login/SignUpPage.tsx";
 
 function IndexPage() {
-    //implement also for header
-   function openLogInPage(){
-        store.setIsLoginOpen(true);
-    }
-
-   function openSignUpPage(){
-       store.setIsSignUpOpen(true);
-   }
 
     useEffect(() => {
         store.setIsLoginOpen(true);
