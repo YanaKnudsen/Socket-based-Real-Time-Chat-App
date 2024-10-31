@@ -41,22 +41,7 @@
           align-items: center;
         }
       }
-      .btns{
-        display: flex;
-        flex-direction: row;
-        justify-content: center;
-        align-items: center;
-        gap: 5px;
-        .btn{
-          background-color: #60adb2;
-          padding: 5px 15px;
-          margin: 0;
 
-        }
-        .delete{
-          background-color: red;
-        }
-      }
 
 
     }
@@ -76,6 +61,7 @@
       justify-content: center;
       align-items: center;
       .iconCont{
+        cursor: pointer;
         width: 70%;
         aspect-ratio:1;
         background-color: #60adb2;
@@ -98,15 +84,20 @@
     display: flex;
     flex-basis: 95%;
     flex-direction: column;
+    max-height: 90%;
 
     .chat{
+      margin-top: 10px;
       width: 100%;
       display: flex;
+      max-height: 80%;
       flex-basis: 90%;
       flex-direction: column;
-      background-color: pink;
       overflow: hidden;
       gap:10px;
+      overflow-y: scroll;
+      border: 1px solid gray;
+      border-radius: 14px;
       .message{
         max-width: 70%;
         background-color: blue;
@@ -114,7 +105,27 @@
         padding: 10px;
       }
     }
+
   }
 
 
+  .btn{
+    background-color: #60adb2;
+    padding: 5px 15px;
+    margin: 0;
+    width: fit-content;
+
+  }
+  .delete{
+    background-color: red;
+  }
+
+  .btns{
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+
+  }
 }

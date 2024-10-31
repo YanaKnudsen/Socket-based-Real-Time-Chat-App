@@ -57,8 +57,8 @@ io.on("connection",(socket)=> {
         socket.join(data.room.id);
     })
     socket.on("send_message", (data) => {
-        console.log("message data",data);
-        socket.to(data.roomId).emit("receive_message",data.message);
+        console.log("message data",data.messageInfo);
+        socket.to(data.roomId).emit("receive_message",data.messageInfo);
     })
 })
 
@@ -119,7 +119,7 @@ app.get('/createRoom',authenticateToken,async (req,res)=> {
         console.log("this object is not in the cache")
     }
     //const roomObj = { id: roomId, owner: req.user._id }; create new type room
-    value?.push({id:roomId,owner:req.user._id})
+    value?.push({id:roomId,owner:req.user.name})
     myCache.mset([
         {key: "rooms", val: value, ttl: 10000},
     ])

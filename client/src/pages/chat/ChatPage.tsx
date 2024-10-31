@@ -7,11 +7,12 @@ import AxiosInstance from "../../axios/AxiosInstance.tsx";
 import store from "../../mobx/AppDataStore.ts";
 import {RoomInfo} from "../../@types/RoomInfo.ts";
 import {socket} from "../../socket/socket.ts";
+import {MessageInfo} from "../../@types/MessageInfo.ts";
 
 
 function ChatPage() {
     const [message,setMessage]=useState<string>("");
-    const [messages,setMessages]=useState<string[]>([]);
+    const [messages,setMessages]=useState<Array<MessageInfo>>([]);
     const [chatId,setChatId]=useState('');
     const [isRoomJoined,setIsRoomJoined]=useState(false);
     const [rooms,setRooms]=useState<Array<RoomInfo>>([]);
@@ -29,8 +30,8 @@ function ChatPage() {
             console.log("here")
             alert(`connected to the room ${room}`);
         })
-        socket.on("receive_message",(recMessage:string)=>{
-            console.log("recMessage",recMessage)
+        socket.on("receive_message",(recMessage:MessageInfo)=>{
+            console.log("recMessage",recMessage);
             setMessages(messages => [...messages, recMessage]);
         })
     }, [socket]);
@@ -79,10 +80,14 @@ function ChatPage() {
     }
 
     function sendMessage(){
-        console.log("init message",message)
-        setMessages(messages => [...messages, message]);
-        socket.emit("send_message",{message:message,roomId:chatId});
-        setMessage('');
+        if (message!==""){
+            console.log("init message",message)
+            let newMessage:MessageInfo={message:message,sender:store.user?.name};
+            setMessages(messages => [...messages, newMessage]);
+            socket.emit("send_message",{messageInfo:newMessage,roomId:chatId});
+            setMessage('');
+        }
+
     }
 
 
@@ -94,15 +99,15 @@ function ChatPage() {
                     <>
                         <div className="messagesArea">
 
-                            welcome to chat
-                            <div className="btn" onClick={leaveRoom}>
+                            room {chatId}
+                            <div className="btn delete" onClick={leaveRoom}>
                                 leave
                             </div>
-                            <div className="chat">
+                            <div className="chat scrollable">
                                 {messages.map((mes,idx)=>{
                                     return(
-                                        <div key={idx} className="message">
-                                            {mes}
+                                        <div key={idx} className="message" style={{background:store.user?.name===mes.sender?"#ACE1AF":"#6CB4EE",alignSelf:store.user?.name===mes.sender?"flex-end":"flex-start"}}>
+                                            {mes.message}
                                         </div>
                                     )
                                 })}
@@ -130,7 +135,7 @@ function ChatPage() {
                         return(<div key={idx} className="room">
                             <div className="userandroom">
                                 <div className="user">
-                                {store.user?.name[0]}
+                                {room.owner[0]}
                                 </div>
                                 {room.id}
                             </div>
