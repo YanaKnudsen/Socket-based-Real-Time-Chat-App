@@ -27,13 +27,13 @@ const bcryptSalt=bcrypt.genSaltSync(8);
 app.use(express.json());
 app.use(cors({
     credentials:true,
-    origin:'http://localhost:5173',
+    origin:['http://localhost:5173',"http://localhost:5175"],
 }));
 
 
 const io = new Server(server,{
     cors:{
-        origin: "http://localhost:5173",
+        origin: ["http://localhost:5173","http://localhost:5175"],
         methods:["GET","POST"]
     }   ,
 });
@@ -53,12 +53,19 @@ io.on("connection",(socket)=>{
 
 io.on("connection",(socket)=> {
     socket.on("join_room", (data) => {
-        console.log("data",data.room.id);
         socket.join(data.room.id);
+        socket.to(data.room.id).emit("receive_id",data.user_id);
     })
     socket.on("send_message", (data) => {
         console.log("message data",data.messageInfo);
         socket.to(data.roomId).emit("receive_message",data.messageInfo);
+    })
+    socket.on("call", (data) => {
+        socket.to(data.roomId).emit("answer_call", data.roomId);
+    })
+    socket.on("call_answered", (data) => {
+        console.log("call answere room ",data)
+        socket.to(data.roomId).emit("connect_video");
     })
 })
 
@@ -150,7 +157,7 @@ app.get('/getRooms',authenticateToken,async (req,res)=> {
 
 });
 
-/*
+/* join omm redirect
 app.get('/chat/:room',async (req,res)=> {
     //res.render('room',{roomId:req.params.room});
     console.log('here');

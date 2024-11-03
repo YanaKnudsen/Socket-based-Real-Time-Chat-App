@@ -1,6 +1,6 @@
 
 import './chat.scss'
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowUp } from '@fortawesome/free-solid-svg-icons'
 import AxiosInstance from "../../axios/AxiosInstance.tsx";
@@ -8,18 +8,68 @@ import store from "../../mobx/AppDataStore.ts";
 import {RoomInfo} from "../../@types/RoomInfo.ts";
 import {socket} from "../../socket/socket.ts";
 import {MessageInfo} from "../../@types/MessageInfo.ts";
+import {MediaConnection, Peer} from "peerjs";
 
 
 function ChatPage() {
+
+
     const [message,setMessage]=useState<string>("");
     const [messages,setMessages]=useState<Array<MessageInfo>>([]);
     const [chatId,setChatId]=useState('');
     const [isRoomJoined,setIsRoomJoined]=useState(false);
     const [rooms,setRooms]=useState<Array<RoomInfo>>([]);
+    const [stream,setStream]=useState<MediaStream>();
+    const [connectedUsers,setConnectedUsers]=useState<string[]>([]);
+    const [remoteId,setRemoteId]=useState<string>();
+    const [peer,setPeer]=useState<Peer>();
+    const [remoteStream,setRemoteStream]=useState<MediaStream>();
+    const [call,setCall]=useState<MediaConnection>();
+    const [isAnswered,setIsAnswered]=useState<boolean>(false);
+    const peerInstance = useRef<Peer>();
 
+    const localVideo=useRef<HTMLVideoElement>();
+    const userVideo=useRef<HTMLVideoElement>();
 
     useEffect(() => {
         showRooms();
+        // Set up the local media stream
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then((stream) => {
+                setStream(stream);
+                if (localVideo.current) {
+                    localVideo.current.srcObject = stream;
+                }
+            })
+            .catch((error) => console.error("Failed to access local media", error));
+        //set up peer for the user
+        if (store.user?._id){
+            const newPeer = new Peer(store.user?._id);
+
+                 newPeer.on('call',call=>{
+                     call.answer(stream);
+                     call.on('stream', function(remoteStream) {
+                         setRemoteStream(remoteStream);
+                         console.log("remote stream",remoteStream)
+                         userVideo.current.srcObject = remoteStream;
+                         socket.emit("call_answered",{roomId:roomId})
+                     });
+                 })
+                                                                                                 
+
+
+            newPeer.on('open', (id) => {
+                console.log("Peer connection open with ID:", id);
+            });
+                setPeer(newPeer)
+
+
+        }
+
+
+
+
+
     }, []);
     useEffect(() => {
         console.log(messages);
@@ -34,7 +84,75 @@ function ChatPage() {
             console.log("recMessage",recMessage);
             setMessages(messages => [...messages, recMessage]);
         })
-    }, [socket]);
+        socket.on("receive_id",(userId:string)=>{
+            setRemoteId(userId);
+        })
+        socket.on("answer_call",(roomId:string)=>{
+            console.log("answeringp peer",peer);
+            /* if (peer){
+                peer.on('call',call=>{
+                    call.answer(stream);
+                    call.on('stream', function(remoteStream) {
+                        setRemoteStream(remoteStream);
+                        console.log("remote stream",remoteStream)
+                        userVideo.current.srcObject = remoteStream;
+                        socket.emit("call_answered",{roomId:roomId})
+                    });
+                })
+            }    */
+
+
+        })
+
+
+    }, [socket,peer]);
+
+
+    useEffect(() => {
+        console.log("remote stream changed")
+        if (remoteStream){
+          //  userVideo.current.srcObject = remoteStream;
+        }
+
+    }, [remoteStream]);
+
+
+
+   /*
+ if(peer){
+      peer.on('call',call=>{
+          call.answer(stream);
+          call.on('stream', function(remoteStream) {
+              setRemoteStream(remoteStream);
+              console.log("remote stream",remoteStream)
+              userVideo.current.srcObject = remoteStream;
+              //socket.emit("call_answered",{roomId:roomId})
+          });
+      })
+
+ }
+        */
+
+ function callPeer () {
+        if(peer){
+
+            const newCall=peer.call(remoteId,stream);
+                 newCall.on('stream', function(remoteStream2) {
+                userVideo.current.srcObject = remoteStream2;                       
+                console.log("stream user")                                         
+              });                                                                  
+
+
+
+
+
+            // socket.emit("call",{roomId:chatId});
+            // setCall(newCall);
+        }
+
+    };
+
+
 
     function showRooms(){
         AxiosInstance.get('/getRooms',{ headers: {"Authorization" : `Bearer ${store.accessToken}`} })
@@ -71,10 +189,25 @@ function ChatPage() {
         setIsRoomJoined(true);
         setChatId(room.id);
         console.log(room);
+
         if (room){
-        socket.emit("join_room", {room:room})
+            socket.emit("join_room", {room:room,user_id:store.user?._id});
+            navigator.mediaDevices.getUserMedia({video:true,audio:true})
+                .then((stream)=>{
+                    console.log("connecting video")
+                    setStream(stream);
+                    if (localVideo.current) {
+                        localVideo.current.srcObject = stream;
+                    }
+                })
+                .catch((error) => console.error("Failed to access local media", error));
+
          }
     }
+
+
+
+
     function leaveRoom(room){
         setIsRoomJoined(false);
     }
@@ -91,6 +224,9 @@ function ChatPage() {
     }
 
 
+
+
+
     return (
         <div className="main">
             <div className="chatCont">
@@ -103,6 +239,16 @@ function ChatPage() {
                             <div className="btn delete" onClick={leaveRoom}>
                                 leave
                             </div>
+                            <div onClick={()=> {
+                                  callPeer();
+                            }}>call peer</div>
+                            <div style={{width:"250px",height:"300px"}}>
+                                <video playsInline muted ref={localVideo} autoPlay className=" h-full"/>
+                            </div>
+                            <div style={{width:"250px",height:"300px",marginTop:"5px"}}>
+                                <video playsInline muted ref={userVideo} autoPlay className=" h-full"/>
+                            </div>
+
                             <div className="chat scrollable">
                                 {messages.map((mes,idx)=>{
                                     return(
